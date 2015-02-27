@@ -2,7 +2,7 @@
 
 title:            Alabase
 locale:           en_US
-baseurl:          https://mattbalza.github.io/alabase
+baseurl:          /alabase
 
 
 # Jekyll configuration
