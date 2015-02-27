@@ -25,7 +25,7 @@ kramdown:
   use_coderay: false
 
 katex:
-  path_to_js: "./assets/katex/"
+  path_to_js: "./assets/katex/katex.min.js"
 
 
 # Site owner
