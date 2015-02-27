@@ -22,7 +22,7 @@ Often times, people run A/B tests and then:
 
 [^1]: <http://en.wikipedia.org/wiki/Frequentist_inference>
 
-You might have read articles about the perils of [peeking while running A/B tests](http://www.evanmiller.org/how-not-to-run-an-ab-test.html), but instead of indulging into difficult statistical issues, here we seek to give you practical advice for how to **get your A/B tests right**.
+You might have already read articles about the perils of [peeking while running A/B tests](http://www.evanmiller.org/how-not-to-run-an-ab-test.html), but instead of indulging into difficult statistical issues, here we seek to give you practical advice for how to **get your A/B tests right**.
 
 In this first post, we deal with the two-variant case and depict two statistically sound ways to go. The approach extends naturally to testing multiple variants at once, but we postpone that discussion to a later post.
 
@@ -52,6 +52,8 @@ Now we have a way of quantifying what we learn about each conversion rate from a
 
 While formulas can be found to answer special questions of this form, the general case requires that we resort to some form of approximation. Here, we choose to use a [Monte Carlo](http://en.wikipedia.org/wiki/Monte_Carlo_method) approximation because it is both convenient and extremely accurate (so much so that you may well disregard the fact that it is an approximation). The following Python snippet, lets us answer the question: with `alpha` confidence, is variant A's conversion rate better than variant B's conversion rate by at least `gamma`? Or is variant B's conversion rate better than variant A's by `gamma`? 
 
+#### Approach #1
+
 {% highlight python %}
 import numpy as np
 
@@ -63,27 +65,47 @@ def ab_test(alpha, gamma, visitors_A, conversions_A,
   a_better = np.sum(y >= gamma) / float(y.shape[0])
   # Probability that theta_B > theta_A by gamma
   b_better = np.sum(y <= -gamma) / float(y.shape[0])
-  # Mean of the difference of theta_A and theta_B
-  mean_diff = np.mean(y)
+  # 95% credible interval
+  interval = (np.percentile(y, 5), np.percentile(y, 95))
+  print interval
   if a_better > alpha:
-    return ['A', a_better, b_better, mean_diff]
+    return ['A', a_better, b_better, interval]
   else:
     if b_better > alpha:
-      return ['B', a_better, b_better, mean_diff]
+      return ['B', a_better, b_better, interval]
     else:
-      return ['Inconclusive', a_better, b_better, mean_diff]
+      return ['Inconclusive', a_better, b_better, interval]
 {% endhighlight %}
 
-
+Now we may use the code like this
 {% highlight python %}
-def crashme():
-    print "I'm really gonna crash"
-    crashme()
+# 1000 visitors and 10 conversions for A, 2000 visitors and 50 conversions for B
+# Is the difference between the rates greater than 0.5% in either direction with
+# 95% probability?
+ab_test(0.95, 0.005, 1000, 10, 2000, 50)
 {% endhighlight %}
 
-{% raw %}
-<div class="equation" data-expr="\displaystyle F(x)=\int_{-\infty}^\infty f(x)\text{d}x"></div>
-{% endraw %}
+This approach has a few advantages over the classical approaches that the internet is full of. Most importantly:
+
+* Feel free to peek. As soon as the test gives a conclusive result, you can stop the test and be confident.
+* When you report your result, if you include the credible interval there is a 95% probability that the difference between the two conversion rates lies in there.
+
+**This is no silver bullet, however.** While it is true that this test enjoys very desirable properties from a statistical perspective, beware that it might take a very large amount of visitors before the test terminates, depending on the difference in conversion rates, on the confidence you require (`alpha`) and on the difference you seek (`gamma`). In fact, for values of `gamma` greater than 0, this test might not terminate at all - like...ever!
+
+#### Approach #2
+
+The problem with approach #1 was that it might have never terminated depending on the difference we sought to be confident about. What if, instead of a given difference, we seek a given accuracy in our measure of the difference? Then our test takes three outcomes: one for each variant being better, and one for the two variants being practicly equivalent[^2]. We proceed as follows:
+
+* Choose a region of practical equivalence (ROPE), which is a region within which we consider the two conversion rates to be identical. Outside of this region, on one side we consider variant A being better, on the other side we consider variant B to have the higher conversion rate. 
+
+{% figure rope_example png 'Example of the decision regions given a ROPE going from -0.1 to 0.1' %}
+
+* Choose a desired accuracy in the measurement of the difference of conversion rates. This is done by choosing a credible inteval's amount of probability and width. For example, we might want to say that 99% of the probability should lie in a 0.01-wide range. Think of this as the resolution you want to have for the measurement before terminating the test.
+
+* Once we reach the desired accuracy, we stop the experiment. If the entire credible interval around the mean is outside the region of practical equivalence, we call the test conclusive and declare the better option the one in whose region the credible interval lies. Otherwise, we call the two variants equivalent.
+
+
+[^2]: This idea is hardly new. For some more, readable material on the topic, consult <http://doingbayesiandataanalysis.blogspot.it/2013/11/optional-stopping-in-data-collection-p.html>
 
 ### Standard Code Block
 
