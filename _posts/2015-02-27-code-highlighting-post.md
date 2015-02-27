@@ -1,8 +1,8 @@
 ---
 layout: post
-title: First, Test Post
+title: A/B testng and conversion optimization done right (part 1)
 excerpt: "Demo post displaying the various ways of highlighting code in Markdown."
-tags: [sample post, code, highlighting]
+tags: [ab testing, a/b testing, conversion optimization, web marketing]
 modified: 2015-02-27
 author: ECO
 comments: true
@@ -10,20 +10,68 @@ comments: true
 
 {% include katex_import.html %}
 
-Syntax highlighting is a feature that displays source code, in different colors and fonts according to the category of terms. This feature facilitates writing in a structured language such as a programming language or a markup language as both structures and syntax errors are visually distinct. Highlighting does not affect the meaning of the text itself; it is intended only for human readers.[^1]
+In this series, I will assume that you know what [A/B testing](http://en.wikipedia.org/wiki/A/B_testing) is and that you are interested in giving it a try, but you are not quite sure how to interpret the results.
 
-[^1]: <http://en.wikipedia.org/wiki/Syntax_highlighting>
+### Common Pitfalls
 
-### Pygments Code Blocks
+Often times, people run A/B tests and then:
 
-To modify styling and highlight colors edit `/_sass/_pygments.scss`.
+* as the tests are running, as soon as there is some prevalence of one result the test gets stopped
+* keep running some basic, frequentist[^1] test and as soon as the p-value drops below 5% stop the test
+* come up with some other, creative way to stop the test at the wrong time and draw unjustifiable conclusions
 
-{% highlight css %}
-#container {
-    float: left;
-    margin: 0 -240px 0 0;
-    width: 100%;
-}
+[^1]: <http://en.wikipedia.org/wiki/Frequentist_inference>
+
+You might have read articles about the perils of [peeking while running A/B tests](http://www.evanmiller.org/how-not-to-run-an-ab-test.html), but instead of indulging into difficult statistical issues, here we seek to give you practical advice for how to **get your A/B tests right**.
+
+In this first post, we deal with the two-variant case and depict two statistically sound ways to go. The approach extends naturally to testing multiple variants at once, but we postpone that discussion to a later post.
+
+### The Stats
+---
+*If you know nothing about probability and statistics, feel free to skip ahead. Consider, however, the option of learning something more about this topic before you get involved in any important project where probability and stats are involved.*
+
+---
+
+Suppose that your variants result in different conversion rates <span class="equation" data-expr="\displaystyle \theta_A, \theta_B" />, and that neither variant has a 0% or 100% conversion rate. A basic A/B test may seek to find whether <span class="equation" data-expr="\displaystyle \theta_A > \theta_B"></span>.
+
+We take a Bayesian approach, and use [Beta(1,1)](http://en.wikipedia.org/wiki/Beta_distribution) priors for each conversion rate. This means that, before seeing any observation, we are quite ignorant as to the distribution of the conversion rates, and think that each rate may well take any value between 0% and 100%. For the observations, we have naturally
+{% raw %}
+<div align="center" class="equation" data-expr="\displaystyle p(x_i) = {N_i \choose x_i} \theta_i^{x_i} (1 - \theta_i)^{N_i - x_i}" style="margin-bottom: 20px"></div>
+{% endraw %}
+
+which is just a [Binomial distribution](http://en.wikipedia.org/wiki/Binomial_distribution).
+Combining our prior beliefs with the observations results in the following posterior distribution for <span class="equation" data-expr="\displaystyle \theta_i" />:
+{% raw %}
+<div align="center" class="equation" data-expr="\displaystyle p(\theta_i | x_i) = \text{Beta}(x_i + 1, N_i - x_i + 1)" style="margin-bottom: 20px"></div>
+{% endraw %}
+All this says is that what we learn about one conversion rate after a number of visits has a very simple dependency on the number of visitors that we converted and the number of those that we did not convert. Duh...
+
+{% figure anim_beta gif 'Evolution of the posterior distribution of the conversion rate. By the end of the animation, there are 1000 observations (visitors). Notice how the uncertainty is reduced as more observations are accumulated.' %}
+
+Now we have a way of quantifying what we learn about each conversion rate from an experiment, but we still need a way to perform inferences about what conversion rate is higher, and we would like to know by how much one rate is better and have a measure of confidence for our statements. For instance, we might want to say that we are 95% confident that <span class="equation" data-expr="\displaystyle \theta_A - \theta_B \ge 0.05"></span>, i.e. that the conversion rate of variant 1 is at least 5% greater than that of variant 2.
+
+While formulas can be found to answer special questions of this form, the general case requires that we resort to some form of approximation. Here, we choose to use a [Monte Carlo](http://en.wikipedia.org/wiki/Monte_Carlo_method) approximation because it is both convenient and extremely accurate (so much so that you may well disregard the fact that it is an approximation). The following Python snippet, lets us answer the question: with `alpha` confidence, is variant A's conversion rate better than variant B's conversion rate by at least `gamma`? Or is variant B's conversion rate better than variant A's by `gamma`? 
+
+{% highlight python %}
+import numpy as np
+
+def ab_test(alpha, gamma, visitors_A, conversions_A,
+  visitors_B, conversions_B, n_points=1000000):
+  y = np.random.beta(conversions_A + 1,visitors_A - conversions_A + 1, n_points) - \
+    np.random.beta(conversions_B + 1, visitors_B - conversions_B + 1, n_points)
+  # Probability that theta_A > theta_B by gamma
+  a_better = np.sum(y >= gamma) / float(y.shape[0])
+  # Probability that theta_B > theta_A by gamma
+  b_better = np.sum(y <= -gamma) / float(y.shape[0])
+  # Mean of the difference of theta_A and theta_B
+  mean_diff = np.mean(y)
+  if a_better > alpha:
+    return ['A', a_better, b_better, mean_diff]
+  else:
+    if b_better > alpha:
+      return ['B', a_better, b_better, mean_diff]
+    else:
+      return ['Inconclusive', a_better, b_better, mean_diff]
 {% endhighlight %}
 
 

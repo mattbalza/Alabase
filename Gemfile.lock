@@ -17,6 +17,7 @@ GEM
     ffi (1.9.6-x64-mingw32)
     ffi (1.9.6-x86-mingw32)
     hitimes (1.2.2)
+    hitimes (1.2.2-x86-mingw32)
     jekyll (2.5.1)
       classifier-reborn (~> 2.0)
       colorator (~> 0.1)
@@ -41,6 +42,7 @@ GEM
     jekyll-sitemap (0.6.2)
     jekyll-watch (1.1.2)
       listen (~> 2.7)
+    jekyll_figure (0.0.3)
     kramdown (1.5.0)
     liquid (2.6.1)
     listen (2.7.11)
@@ -93,4 +95,5 @@ PLATFORMS
 DEPENDENCIES
   jekyll
   jekyll-sitemap
+  jekyll_figure
   octopress (~> 3.0.0.rc.12)
