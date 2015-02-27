@@ -24,6 +24,9 @@ kramdown:
   toc_levels: 1..6
   use_coderay: false
 
+katex:
+  path_to_js: "./assets/katex/"
+
 
 # Site owner
 owner:
