@@ -31,3 +31,22 @@ sitemap: false
   text-align:justify;
   width: 43%;
 }
+
+.image-wrap { 
+  background-image: url(/images/mountain.png); 
+  height:230px; 
+  }
+
+.image-wrap > h1 {
+  margin-left:500px;
+  margin-top:64px;
+  color: #fff;
+  font-size:52px;
+  }
+
+.image-wrap > div {
+  margin-left:500px;
+  margin-top:-20px;
+  color: #fff;
+  font-size:20px;
+  }
