@@ -31,6 +31,9 @@ def crashme():
     crashme()
 {% endhighlight %}
 
+{% latex %}
+\int_0^1 f(x) \mathrm d x
+{% endlatex %}
 
 ### Standard Code Block
 
