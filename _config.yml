@@ -2,7 +2,7 @@
 
 title:            Alabase
 locale:           en_US
-baseurl:          /alabase
+url:          /alabase
 
 
 # Jekyll configuration
