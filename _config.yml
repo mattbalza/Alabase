@@ -1,8 +1,8 @@
 # Site wide configuration
 
-title:            Site Title
+title:            Alabase
 locale:           en_US
-url:              
+url:              /alabase
 
 
 # Jekyll configuration
